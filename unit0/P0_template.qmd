@@ -1,7 +1,7 @@
 ---
 title: "Client Report - Project 0: Introduction"
 subtitle: "Course DS 250"
-author: "[STUDENT NAME]"
+author: "Shengjian Zhou"
 format:
   html:
     self-contained: true
@@ -49,15 +49,17 @@ __Include the tables created from [PY4DS: CH2 Data Visualization](https://aeturr
 
 ```{python}
 # Include and execute your code here
-
+penguins = load_penguins()
+penguins
 
 ```
 
-_include figures in chunks and discuss your findings in the figure._
+
+_This code output the first 5 lines of the chart._
 
 ```{python}
 # Include and execute your code here
-
+penguins.head()
 
 ```
 
@@ -68,36 +70,74 @@ __Recreate the example charts from [PY4DS: CH2 Data Visualization](https://aetur
 
 
 ```{python}
-# Include and execute your code here
-
-
-```
-
-_include figures in chunks and discuss your findings in the figure._
-
-```{python}
-# Include and execute your code here
-
-
-```
-
-
-```{python}
-# Include and execute your code here
-
-
+(
+    ggplot(data=penguins, mapping=aes(x="flipper_length_mm", y="body_mass_g"))
+    + geom_point(aes(color="species", shape="species"))
+    + geom_smooth(method="lm")
+    + labs(
+        title="Body mass and flipper length",
+        subtitle="Dimensions for Adelie, Chinstrap, and Gentoo Penguins",
+        x="Flipper length (mm)",
+        y="Body mass (g)",
+        color="Species",
+        shape="Species",
+    )
+)
 ```
 
 
+_This is a dot plot that is colored by species._
+
 ```{python}
 # Include and execute your code here
-
+(
+    ggplot(
+        data=penguins,
+        mapping=aes(x="flipper_length_mm", y="body_mass_g", color="species"),
+    )
+    + geom_point()
+)
 
 ```
 
 
+_This plot adds a smooth curve displaying the relationship between body mass and flipper length._
+
 ```{python}
 # Include and execute your code here
+(
+    ggplot(
+        data=penguins,
+        mapping=aes(x="flipper_length_mm", y="body_mass_g", color="species"),
+    )
+    + geom_point()
+    + geom_smooth(method="lm")
+)
 
+```
+
+
+_This makes sure it calculates for the entire date instead of calculating per species._
+
+```{python}
+# Include and execute your code here
+(
+    ggplot(data=penguins, mapping=aes(x="flipper_length_mm", y="body_mass_g"))
+    + geom_point(mapping=aes(color="species"))
+    + geom_smooth(method="lm")
+)
+
+```
+
+
+_This also adds shape for species to be more human-readable._
+
+```{python}
+# Include and execute your code here
+(
+    ggplot(data=penguins, mapping=aes(x="flipper_length_mm", y="body_mass_g"))
+    + geom_point(mapping=aes(color="species", shape="species"))
+    + geom_smooth(method="lm")
+)
 
 ```
