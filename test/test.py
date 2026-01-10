@@ -26,3 +26,4 @@ q = '''
     '''
 table = pd.read_sql_query(q,con)
 table.filter(['name'])
+# %%
