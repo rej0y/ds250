@@ -1,0 +1,10 @@
+numpy
+polars
+scikit-learn
+lets-plot
+palmerpenguins
+nbformat
+nbclient
+pyyaml
+setuptools
+jupyter>=1.1.1
