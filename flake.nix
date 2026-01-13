@@ -46,7 +46,7 @@
             uvOverlay
           ]);
 
-      venv = pythonSet.mkVirtualEnv "dev-env" workspace.deps.default;
+      venv = pythonSet.mkVirtualEnv "dev-env" workspace.deps.default.deps;
     in
     {
       devShells.${system}.default = pkgs.mkShell {

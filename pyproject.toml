@@ -14,3 +14,11 @@ dependencies = [
   "pyyaml",
   "setuptools",
 ]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Don't try to auto-discover packages.
+packages = []
