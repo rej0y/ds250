@@ -1,0 +1,20 @@
+# This is header
+## this is subheader
+### this is a sub-subheader
+
+Bold text looks __like this__
+italic test looks like *this*
+computer font looks like `monotype`
+
+1. 
+
+
+
+
+
+```{python}
+2 + 2
+x = 3
+x
+
+```
