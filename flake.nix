@@ -53,6 +53,7 @@
         packages = [
           venv
           pkgs.uv
+          pkgs.quarto
         ];
       };
     };
