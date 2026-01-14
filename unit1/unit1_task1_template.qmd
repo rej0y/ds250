@@ -44,11 +44,11 @@ df = pl.read_csv("names_year_csv.csv")
 
 __What was the earliest year that the name ‘Felisha’ was used?__
 
-_type your results and analysis here_
+_According to the output, the first name "Felisha" appears in the year 1964._
 
 ```{python}
 # Q1
-
+df.select(["name", "year", "Total"]).filter(pl.col("name") == "Felisha").sort("year").head()
 
 ```
 
@@ -57,11 +57,11 @@ _type your results and analysis here_
 
 __What year had the most babies named 'David'? How many babies were named 'David' that year?__
 
-_type your results and analysis here_
+_According to the output, the year 1955 had the most babies named "David," which is 86389._
 
 ```{python}
 # Q2
-
+df.select(["name", "year", "Total"]).filter(pl.col("name") == "David").sort("Total", descending=True).head()
 
 ```
 
@@ -70,10 +70,11 @@ _type your results and analysis here_
 
 __What year did your name hit its peak? How many babies were named your name in that year?__
 
-_type your results and analysis here_
+_According to the output, the year 1947 had the most babies named "John," which is 88474._
 
 ```{python}
 # Q3
+df.select(["name", "year", "Total"]).filter(pl.col("name") == "John").sort("Total", descending=True).head()
 
 ```
 
@@ -82,12 +83,12 @@ _type your results and analysis here_
 
 __In the most recent year, what was the most common female name in Utah?__ 
 
-_type your results and analysis here_
+_According to the output, in the year 2024 in Utah, the name "Olivia," which is a female name, has the highest number, which is 215._
 
 ```{python}
-# Q5
-
-
+# Q4
+# Get the column "name," "year," and "UT."
+df.select(["name", "year", "UT"]).sort("year", "UT", descending=True).head(10)
 ```
 
 

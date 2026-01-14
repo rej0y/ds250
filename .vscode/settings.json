@@ -3,7 +3,15 @@
         "Felisha",
         "ggplot",
         "katex",
+        "nbclient",
+        "nbformat",
         "numpy",
-        "palmerpenguins"
+        "palmerpenguins",
+        "pyarrow",
+        "pyproject",
+        "pyyaml",
+        "scikit",
+        "setuptools",
+        "venv"
     ]
 }
