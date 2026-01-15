@@ -48,7 +48,12 @@ _According to the output, the first name "Felisha" appears in the year 1964._
 
 ```{python}
 # Q1
-df.select(["name", "year", "Total"]).filter(pl.col("name") == "Felisha").sort("year").head()
+(
+df.select(["name", "year", "Total"])
+  .filter(pl.col("name") == "Felisha")
+  .sort("year")
+  .head()
+)
 
 ```
 
@@ -61,7 +66,12 @@ _According to the output, the year 1955 had the most babies named "David," which
 
 ```{python}
 # Q2
-df.select(["name", "year", "Total"]).filter(pl.col("name") == "David").sort("Total", descending=True).head()
+(
+df.select(["name", "year", "Total"])
+  .filter(pl.col("name") == "David")
+  .sort("Total", descending=True)
+  .head()
+)
 
 ```
 
@@ -74,7 +84,12 @@ _According to the output, the year 1947 had the most babies named "John," which 
 
 ```{python}
 # Q3
-df.select(["name", "year", "Total"]).filter(pl.col("name") == "John").sort("Total", descending=True).head()
+(
+df.select(["name", "year", "Total"])
+  .filter(pl.col("name") == "John")
+  .sort("Total", descending=True)
+  .head()
+)
 
 ```
 
@@ -88,7 +103,11 @@ _According to the output, in the year 2024 in Utah, the name "Olivia," which is 
 ```{python}
 # Q4
 # Get the column "name," "year," and "UT."
-df.select(["name", "year", "UT"]).sort("year", "UT", descending=True).head(10)
+(
+df.select(["name", "year", "UT"])
+  .sort("year", "UT", descending=True)
+  .head(10)
+)
 ```
 
 

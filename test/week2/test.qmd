@@ -1,0 +1,173 @@
+---
+title: "Untitled"
+format: html
+---
+
+Write my text here. I can format it, __like so__.
+
+
+# Headers
+
+
+
+```{python}
+print("hello world")
+```
+
+
+
+
+
+Here is some more text
+
+
+
+```{python}
+2 + 2 
+x = 5
+x
+```
+
+
+
+
+
+```{python}
+import polars as pl
+
+url = "https://byui-cse.github.io/cse110-course/lesson11/life-expectancy.csv"
+
+df = pl.read_csv(url)
+```
+
+
+
+```{python}
+df
+
+# attributes of an object
+df.columns
+df.shape
+
+
+```
+
+
+
+A method, or function, accepts inputs and gives an output
+
+
+
+```{python}
+df.head(3)
+df.describe()
+```
+
+
+# Subsetting the data
+
+The single bracket is part of base python.
+
+```{python}
+df[["Entity", "Year"]]
+df[0:3] #columns
+df[["Entity", "Year"]][0:3]
+```
+
+
+
+## Rename a column
+
+
+```{python}
+# df.rename({"Life expectancy (years)": "Life_yrs"})
+
+
+#an alternative way
+df.columns = ["Entity", "Code", "Year", "Life_yrs"]
+
+```
+
+
+## Subset columns using filter()
+
+
+```{python}
+df.select("Entity")
+df.select(["Entity", "Year", "Life_yrs"])
+
+df.drop('Code')
+
+df.select(pl.col("Life_yrs") * 12)
+#moral of the story: if it's not working, try putting the column name in pl.col()
+
+df_col3 = df.drop("Code")
+```
+
+
+# Subsetting rows using filter()
+
+### filtering numeric data
+
+
+
+```{python}
+df.filter(pl.col("Year") > 1999)
+
+df.filter(pl.col("Year") >= 1980, pl.col("Year") <= 2000)
+df.filter((pl.col("Year") >= 1980) & (pl.col("Year") <= 2000))
+
+
+```
+
+
+### filtering on character strings
+
+```{python}
+df.filter(pl.col("Entity") ==  "China")
+# 1 out of 10, would not recommend
+
+
+# df.filter((pl.col("Entity") == "China") | 
+#          (pl.col("Entity") == "Japan") | 
+#          (pl.col("Entity") == "Cuba"))
+
+
+# Faster
+
+jcc = df.filter(pl.col("Entity").is_in(["China", "Japan", "Cuba"]))
+
+
+```
+
+## sorting the data
+
+```{python}
+# Example 
+
+(
+jcc.drop("Code")
+    .sort(["Year", "Life_yrs"], descending=[False, True])
+    .tail(10)
+)
+```
+
+
+
+### using item()
+
+
+
+item() will return a singular value
+
+
+
+
+
+```{python}
+last_country = df.item(19027, "Entity")
+```
+
+
+
+The last country is `{python} last_country`
