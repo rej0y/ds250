@@ -1,0 +1,58 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+
+```{python}
+import polars as pl
+import numpy as np
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+url = "https://byui-cse.github.io/cse110-course/lesson11/life-expectancy.csv"
+
+df = pl.read_csv(url)
+df.columns = ["Entity", "Code", "Year", "Life_yrs"]
+```
+
+
+
+
+```{python}
+usa = df.filter(pl.col("Entity") == "United States")
+```
+
+
+Create a line chart of USA life expectancies over time.
+
+```{python}
+(
+  ggplot(data=usa, mapping=aes(x="Year", y="Life_yrs"))
+  + geom_line()
+  + geom_rect(xmin=1915, xmax=1920, ymin=45, ymax=55, fill="red", alpha=.2, color="blue")
+  + geom_vline(xintercept=1943, color="red", size=1.2, linetype=2)
+  + geom_text(x=1945, y=62, label="Last decrease", hjust=1, angle=90)
+)
+```
+
+
+Graphing multiple countries
+```{python}
+three = df.filter(pl.col("Entity").is_in(["United States", "Japan", "France"]))
+```
+
+
+
+```{python}
+(
+  ggplot(data=three, mapping=aes(x="Year", y="Life_yrs", color="Entity"))
+  + geom_line()
+  + labs(title="Millions Die in Spanish Flu", subtitle="Except in Japan", y="Life expectancy")
+)
+```

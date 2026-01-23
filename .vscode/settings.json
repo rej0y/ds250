@@ -12,6 +12,7 @@
         "pyyaml",
         "scikit",
         "setuptools",
-        "venv"
+        "venv",
+        "vline"
     ]
 }
