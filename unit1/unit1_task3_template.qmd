@@ -1,0 +1,146 @@
+---
+title: "Client Report - Famous Names"
+subtitle: "Unit 1 Task 3"
+author: "John Zhou"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+
+---
+
+```{python}
+import polars as pl
+import numpy as np
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+```{python}
+# Learn morea about Code Cells: https://quarto.org/docs/reference/cells/cells-jupyter.html
+
+# Include and execute your code here
+df = pl.read_csv("names_year_csv.csv")
+```
+
+
+
+## QUESTION 1
+
+<!-- Make sure at least one of your charts includes reference marks!! -->
+
+__Make a new column that represents the total number of babies with your name for only those states in which you have lived. (If you have only ever lived in one state, pick at least one other state so you get practice summing across columns). Make a graph displaying that total for your name over time.__
+
+_According to the graph, the usage of the name "John" continue to go down after 1983 even in Idaho and Utah._
+
+```{python}
+# Q1
+john = (
+  df.select(["name", "year", "ID", "UT"])
+    .filter(pl.col("name") == "John")
+    .with_columns((pl.col("ID") + pl.col("UT")).alias("ID_UT_total"))
+)
+(
+  ggplot(john, aes(x="year", y="ID_UT_total"))
+  + geom_line()
+  + labs(
+    x="Year",
+    y="Total numbers of the name \"John\" in ID and UT",
+    title="\"John\" as a baby name continue go down in Idaho and Utah"
+  )
+)
+```
+
+
+## QUESTION 2
+
+1. __Let's look at a name that is special for members of the church: Brigham. For each year, calculate what proportion of babies named Brigham were born in Idaho and Utah? Make a graph displaying the proportion over time.__  
+
+_According to the graph, we can see that after the 21st century, more and more people are accepting the name "Brigham" outside of ID & UT._
+
+```{python}
+# Q2
+brigham = (
+  df.select(["name", "year", "ID", "UT", "Total"])
+    .filter(pl.col("name") == "Brigham")
+    .with_columns(
+      ((pl.col("ID") + pl.col("UT")) / pl.col("Total") * 100)
+      .alias("Proportion")
+    )
+)
+(
+  ggplot(brigham, aes(x="year", y="Proportion"))
+  + geom_line()
+  + geom_rect(
+    xmin="1996",
+    xmax="2024",
+    ymin="30",
+    ymax="95",
+    linetype=2
+  )
+  + geom_text(
+    x="2010",
+    y="22",
+    label="Proportion around the 21st century"
+  )
+  + labs(
+    title="More and more people are accepting the name \"Brigham\" outside of ID & UT",
+    x="Year",
+    y="Percentage of Brighams Born in ID & UT"
+  )
+)
+```
+
+<!-- Make sure at least one of your charts includes reference marks!! -->
+
+## QUESTION 3
+
+1. __Consider doing some data validation. For the name David, calculate a sum of all 50 states and District of Columbia for each year. Now compare that total to the value in the 'Total' column. In which years, if any, do they not agree?__
+
+_According to the graph, there is no mismatch for the name David between the states and D.C. sum and the data sum._
+
+```{python}
+# Q3
+david = (
+  df.filter(pl.col("name") == "David")
+    .with_columns(
+      pl.sum_horizontal(
+        pl.exclude(["name", "year", "Total"])
+      ).alias("state_sum")
+    )
+    .select("year", "Total", "state_sum")
+    .unpivot(
+      index="year",
+      on=["Total", "state_sum"],
+      variable_name="source",
+      value_name="count"
+    )
+)
+(
+  ggplot(david, aes(x="year", y="count", color="source"))
+  + geom_line()
+  + labs(
+      title="David: State Sum vs Data Total",
+      x="Year",
+      y="Count",
+      color="Source"
+  )
+)
+```

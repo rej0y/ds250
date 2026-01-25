@@ -12,6 +12,7 @@
         "pyyaml",
         "scikit",
         "setuptools",
+        "unpivot",
         "venv",
         "vline"
     ]
