@@ -1,0 +1,124 @@
+---
+title: "Client Report - Famous Names"
+subtitle: "Unit 1 Task 3"
+author: "John Zhou"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+
+---
+
+```{python}
+import polars as pl
+import numpy as np
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+```{python}
+# Learn morea about Code Cells: https://quarto.org/docs/reference/cells/cells-jupyter.html
+
+# Include and execute your code here
+df = pl.read_csv("names_year_csv.csv")
+```
+
+
+
+## QUESTION 1
+
+
+__Reproduce the chart Elliot using the data from the names_year.csv file. If, after a couple of hours, you can get the chart close, but not exactly the same, that is okay. You will learn more to the degree you push yourself__
+
+_Here is the graph._
+
+```{python}
+# Q1
+elliot = (
+    df.filter(
+        (pl.col("name") == "Elliot") &
+        (pl.col("year") >= 1950)
+    )
+    .select(["name", "year", "Total"])
+)
+(
+    ggplot(elliot, aes(x="year", y="Total", color="name"))
+    + geom_line(size=1)
+    + scale_color_manual(values=["blue"])
+    + theme_gray()
+    + theme(
+        panel_grid_minor=element_blank(),
+        text=element_text(family="serif", size=15),
+        axis_ticks=element_blank(),
+        plot_title_position="plot",
+        plot_title=element_text(
+            margin=[0, 0, 5, 15],
+            size=20
+        ),
+        axis_title_x=element_text(
+            size=20,
+            margin=[10, 0, 0, 0]
+        ),
+        legend_position="right",
+        legend_justification="top",
+        legend_margin=[3, 18]
+    )
+    + scale_x_continuous(format="d", expand=[0, 0], limits=[None, 2025])
+    + scale_y_continuous(format="d", expand=[0.08, 0])
+    + ggsize(800, 408)
+    + geom_vline(xintercept=1982, linetype=2, color="red", size=1)
+    + geom_vline(xintercept=1984, linetype=2, color="red", size=1)
+    + geom_vline(xintercept=2002, linetype=2, color="red", size=1)
+    + geom_text(
+        x=1982,
+        y=2500,
+        size=8,
+        nudge_x=-1,
+        nudge_y=500,
+        label="E.T. Released",
+        hjust=1,
+        inherit_aes=False
+    )
+    + geom_text(
+        x=1984,
+        y=2500,
+        size=8,
+        nudge_x=1,
+        nudge_y=500,
+        label="Second Release",
+        hjust=0,
+        inherit_aes=False
+    )
+    + geom_text(
+        x=2002,
+        y=2500,
+        size=8,
+        nudge_x=1,
+        nudge_y=500,
+        label="Third Release",
+        hjust=0,
+        inherit_aes=False
+    )
+    + labs(
+        y="",
+        title="Elliot...What?"
+    )
+)
+```

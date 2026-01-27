@@ -1,0 +1,143 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+
+```{python}
+import polars as pl
+import numpy as np
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+followers = pl.read_csv("https://byuidatascience.github.io/DS250-Course-Polars/Data/social_media_followers.csv")
+```
+
+
+GOAL: Create new columns
+
+
+Let's put the values in terms of millions
+
+
+```{python}
+# Does not work.
+# followers["instagram"] = followers["instagram"] / 1000000
+```
+
+
+Instead use the with.columns() command.
+
+```{python}
+followers.with_columns(pl.col("instagram") / 1000000)
+```
+
+
+
+with_columns() is just SYNTACTIC SUGAR for select()
+
+```{python}
+followers.select(pl.col("instagram") / 1000000, pl.all().exclude("instagram"))
+```
+
+
+
+If we want to give the column a new name, there are 2 ways:
+
+- assign it a name with an =
+- with the alias() method
+
+
+
+```{python}
+# assign new name with =
+followers.with_columns(insta_mill = pl.col("instagram") / 1000000).head(5)
+```
+
+
+
+```{python}
+# Use the alias
+followers.with_columns((pl.col("instagram") / 1000000).alias("insta_mill")).head(5)
+```
+
+
+
+
+Let's do the transformation to all of the columns, with an end to calculate the relative frequency for each artist. (aka what % of their followers comes from each platform)
+
+
+
+```{python}
+followers.with_columns(
+    pl.col("instagram") / 1000000,
+    pl.col("youtube") / 1000000,
+    pl.col("facebook") / 1000000,
+    pl.col("twitter") / 1000000,
+).with_columns(
+    total = pl.col("instagram") + pl.col("youtube") + pl.col("facebook") + pl.col("twitter")
+).with_columns(
+    insta_perc = (pl.col("instagram") / pl.col("total")),
+    you_perc = (pl.col("youtube") / pl.col("total")),
+    face_perc = (pl.col("facebook") / pl.col("total")),
+    twit_perc = (pl.col("twitter") / pl.col("total")),
+).head(5)
+```
+
+
+Let's use expression expansion to reduce the amount of typing.
+
+
+```{python}
+followers.with_columns(
+    pl.col(["instagram", "youtube", "facebook", "twitter"]) / 1000000
+).with_columns(
+    total = pl.col("instagram") + pl.col("youtube") + pl.col("facebook") + pl.col("twitter")
+).with_columns(
+    (
+        pl.col([
+            "instagram", 
+            "youtube", 
+            "facebook", 
+            "twitter"
+        ]) / pl.col("total")
+    ).name.suffix("_perc")
+).head()
+```
+
+
+
+```{python}
+df = (
+    followers.with_columns(
+        pl.col(["instagram", "youtube", "facebook", "twitter"]) / 1000000
+    ).with_columns(
+        # total = pl.col("instagram") + pl.col("youtube") + pl.col("facebook") + pl.col("twitter")
+        # total = pl.sum_horizontal(pl.all().exclude("id"))
+        total = pl.sum_horizontal(pl.col(pl.Float64))
+    ).with_columns(
+        (
+            pl.col([
+                "instagram", 
+                "youtube", 
+                "facebook", 
+                "twitter"
+            ]) / pl.col("total")
+        ).name.suffix("_perc")
+    ).sort("instagram_perc", descending=True)
+)
+```
+
+
+
+```{python}
+(
+    ggplot(data=df, mapping=aes(x="instagram_perc", y="id"))
+    + geom_bar(stat="identity")
+)
+```
