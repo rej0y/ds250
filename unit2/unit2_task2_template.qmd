@@ -1,0 +1,101 @@
+---
+title: "Client Report - Flights: Column Aggregation"
+subtitle: "Unit 2 Task 2"
+author: "John Zhou"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+```{python}
+import polars as pl
+import requests #new for reading in JSON
+import io       #new for reading in JSON
+import numpy as np
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+# Learn morea about Code Cells: https://quarto.org/docs/reference/cells/cells-jupyter.html
+
+# Include and execute your code here
+url = "https://raw.githubusercontent.com/byuidatascience/data4missing/master/data-raw/flights_missing/flights_missing.json"
+response = requests.get(url)
+df = pl.read_json(io.BytesIO(response.content))
+```
+
+## QUESTION 1
+
+1. __Which airport has the worst delays?__ Describe the metric you chose, and why you chose it to determine the “worst” airport. Your answer should include a summary table that lists (for each airport) the total number of flights, total number of delayed flights, proportion of delayed flights, and average delay time in hours. 
+
+_According to the table, we can see that San Francisco International Airport has the highest delayed proportions, which is shockingly 26%, but in terms of average delay hours, Chicago O'Hare International Airport has the longest delay hours, which is around 1 hour and 8 minutes per delayed flight._
+
+```{python}
+# Include and execute your code here
+
+airport_map = {
+    "ATL": "Hartsfield-Jackson Atlanta International",
+    "DEN": "Denver International",
+    "IAD": "Washington Dulles International",
+    "ORD": "Chicago O'Hare International",
+    "SAN": "San Diego International",
+    "SFO": "San Francisco International",
+    "SLC": "Salt Lake City International"
+}
+
+df = df.with_columns(
+    pl.col("airport_code")
+      .replace(airport_map)
+      .alias("airport_name")
+)
+
+delays = (
+  df.group_by("airport_code")
+    .agg([
+      pl.col("airport_name").first().alias("Airport"),
+      pl.col("num_of_flights_total").sum().alias("Total Flights"),
+      pl.col("num_of_delays_total").sum().alias("Total Delayed Flights"),
+      (pl.col("num_of_delays_total").sum() / pl.col("num_of_flights_total").sum()).alias("Proportion Delayed"),
+      ((pl.col("minutes_delayed_total").sum() / 60) / pl.col("num_of_delays_total").sum()).alias("Avg Delay Hours"),
+    ])
+    .drop("airport_code")
+    .sort("Proportion Delayed", "Avg Delay Hours",descending=True)
+)
+delays
+```
+
+## QUESTION 2
+
+__Create a barplot showing the proportion of all flights that are delayed at each airport. Describe what you learn from this graph.__  
+
+_According to the graph, we can see that Chicago and San Francisco airports have a higher delay proportion than other airports, and Salt Lake City Airport has a way lower delay proportion than other airports._
+
+```{python}
+# Include and execute your code here
+(
+  ggplot(delays, aes(x="Proportion Delayed", y="Airport"))
+  + geom_bar(stat="identity")
+)
+
+```

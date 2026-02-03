@@ -1,0 +1,24 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+```{python}
+import polars as pl
+import numpy as np
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+
+```{python}
+(
+  ggplot()
+  + scale_x_continuous()
+  + theme_classic()
+  + theme(panel_grid=element_line())
+)
+```
