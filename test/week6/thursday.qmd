@@ -1,0 +1,115 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+```{python}
+import polars as pl
+import numpy as np
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+
+df = pl.read_csv('https://byuistats.github.io/M335/data/rcw_reshape.csv')
+
+```
+
+
+
+Key learning objectives: pivot and unpivot
+
+Is data currently in long or wide format? LONG
+
+Convert it to wide format:
+
+
+```{python}
+df_wide = df.pivot(on="Department", values="Count")
+```
+
+
+Convert it back to long format:
+
+```{python}
+df_long = df_wide.unpivot(index=["Year", "Semester", "Semester_Date"],
+                            # on is the smooch or spread
+                            variable_name="Department",
+                            value_name="Count"
+                         )
+```
+
+
+Explicit vs. implicit missing values.
+
+Wide vs. long: when you want each?
+
+# plotting
+
+
+```{python}
+(
+    ggplot(
+        data=df_long,
+        mapping=aes(
+            x="Semester_Date",
+            y="Count",
+            color="Department"
+        )
+    )
+    + geom_line()
+)
+```
+
+
+
+
+```{python}
+df_zeros = df_long.fill_null(0)
+
+(
+    ggplot(
+        data=df_zeros,
+        mapping=aes(
+            x="Semester_Date",
+            y="Count",
+            color="Department"
+        )
+    )
+    + geom_line()
+)
+```
+
+
+A little too busy with all the lines on te same plot, put it on small multiple:
+
+
+
+```{python}
+(
+    ggplot(
+        data=df_zeros,
+        mapping=aes(
+            x="Semester_Date",
+            y="Count",
+        )
+    )
+    + geom_line()
+    + facet_wrap(facets="Department")
+)
+```
+
+
+# Playing with names
+
+
+
+```{python}
+import polars.selectors as cs
+
+df_zeros.with_columns(
+    cs.starts_with("Semester")
+      .name
+      .map(lambda old_name: old_name.replace("Semester", "Sem"))
+)
+```

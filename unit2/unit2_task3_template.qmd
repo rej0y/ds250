@@ -1,0 +1,161 @@
+---
+title: "Client Report - Missing values"
+subtitle: "Unit 2 Task 3"
+author: "John Zhou"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+```{python}
+import polars as pl
+import requests #new for reading in JSON
+import io       #new for reading in JSON
+import numpy as np
+from lets_plot import *
+import json
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+# url = "https://raw.githubusercontent.com/byuidatascience/data4missing/master/data-raw/flights_missing/flights_missing.json"
+# response = requests.get(url)
+# df = pl.read_json(io.BytesIO(response.content))
+df = pl.read_json("flights_missing.json")
+```
+
+## QUESTION 1
+
+1. __Convert values to missing__ Start with a fresh copy of the flights dataset by reading it in from the link provided above (as opposed to starting with the dataset you ended with in the last assignment). Identify data values that are problematic, non-sense or impossible and change them to be missing. In your report include one record example (one row) from your clean data, in the raw JSON format. Your example should display at least one missing value so that we can verify it was done correctly. (Note: JSON will convert NaN's to null). Describe your process for finding values that needed to be changed, and how you changed them.
+
+_Basically, I use a group by and count to check out all of the distinct values for each column, find out the weird values, and replace them with None, and for the num_of_delays_carrier column, I also cast it to Int64 for better formatting._
+
+```{python}
+# Include and execute your code here
+df_clean = (
+  df.with_columns(
+    pl.col("airport_name")
+        .replace({"": None}),
+    pl.col("month")
+        .replace({"n/a": None}),
+    pl.col("num_of_delays_carrier")
+        .replace({"1500+": None})
+        .cast(pl.Int64),
+    pl.col("num_of_delays_late_aircraft")
+        .replace({-999: None}),
+    pl.col("minutes_delayed_nas")
+        .replace({-999: None}),
+  )
+)
+
+print(json.dumps(df_clean[[41, 42]].to_dicts(), indent=2))
+
+```
+
+## QUESTION 2
+
+2. __Filling in missing data__ For all the "minutes_delayed" columns, fill in any missing values with the median of that column. For the "num_of" columns, fill in missing values with that column's mean.
+
+_Nothing to write/report for this question_
+
+```{python}
+# Include and execute your code here
+airport_mapper = {
+  "ATL": "Atlanta, GA: Hartsfield-Jackson Atlanta International",
+  "DEN": "Denver, CO: Denver International",
+  "ORD": "Chicago, IL: Chicago O'Hare International",
+  "SAN": "San Diego, CA: San Diego International",
+  "SFO": "San Francisco, CA: San Francisco International",
+  "SLC": "Salt Lake City, UT: Salt Lake City International",
+  "IAD": "Washington, DC: Washington Dulles International"
+}
+
+df_filled = (
+  df_clean.with_columns(
+    pl.when(pl.col("airport_name").is_null())
+      .then(pl.col("airport_code").replace(airport_mapper))
+      .otherwise(pl.col("airport_name"))
+      .alias("airport_name"),
+    pl.col("month")
+        .fill_null(strategy="backward")
+        .fill_null(strategy="forward"),
+    pl.col("year")
+        .fill_null(strategy="backward")
+        .fill_null(strategy="forward"),
+    pl.col("num_of_delays_carrier")
+        .fill_null(1500),
+    pl.col("num_of_delays_late_aircraft")
+        .fill_null(pl.col("num_of_delays_late_aircraft").median()),
+    pl.col("minutes_delayed_carrier")
+        .fill_null(pl.col("minutes_delayed_carrier").median()),
+    pl.col("minutes_delayed_nas")
+        .fill_null(pl.col("minutes_delayed_nas").median()),
+  )
+)
+df_filled
+```
+
+## QUESTION 3
+ 
+3. __Display a histogram for num_of_delays_carrier and for minutes_delayed_nas (2 separate histograms in total). Comment on the shape of each one. Also report the mean of each of these columns now that missing values have been filled in.__
+
+_For the column num_of_delays_carrier, we can see there was a spike around 400. After that, there were fewer and fewer count numbers, but we see that there was also a spike around 1500, which means the reasons for carrier delays are usually grouped together._
+
+```{python}
+# Include and execute your code here
+(
+  ggplot(df_filled, aes(x="num_of_delays_carrier"))
+  + geom_histogram()
+)
+```
+
+```{python}
+(
+  df_filled.select(
+    pl.col("num_of_delays_carrier")
+      .mean()
+      .alias("Mean of num_of_delays_carrier")
+  )
+)
+```
+
+_For the minutes_delayed_nas column, we can see that the graph is completely right-skewed, which means that the delay that is caused by NAS usually does not take a very long time and it is very stable._
+
+```{python}
+# Include and execute your code here
+(
+  ggplot(df_filled, aes(x="minutes_delayed_nas"))
+  + geom_histogram()
+)
+
+```
+
+```{python}
+(
+  df_filled.select(
+    pl.col("minutes_delayed_nas")
+      .mean()
+      .alias("Mean of minutes_delayed_nas")
+  )
+)
+```

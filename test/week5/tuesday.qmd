@@ -45,3 +45,229 @@ url = "https://byuidatascience.github.io/DS250-Course-Polars/Data/house-price.js
 response = requests.get(url)
 df = pl.read_json(io.BytesIO(response.content))
 ```
+
+
+
+Lesson Objectives
+
+- Understand JSON
+- Work with conditional logic
+- Review expression expansion (regex and case selectors)
+- explore some other geoms for graphing
+
+
+
+## Conditional Logic
+
+```{python}
+df_adj = (
+    df.with_columns(
+        price_adj = 
+            pl.when(pl.col("furnishingstatus") == "unfurnished")
+              .then(pl.col("price") + 5000 * pl.col("area") / 1000)
+              .when(pl.col("furnishingstatus") == "semi-furnished")
+              .then(pl.col("price") + 2000 * pl.col("area") / 1000)
+              .otherwise(pl.col("price"))
+    )
+)
+
+```
+
+
+
+## Review expression expansion
+
+
+Let's divide price and price_adj by 1000.
+
+```{python}
+(
+    df_adj.with_columns((pl.col(["price", "price_adj"]) / 1000).name.suffix("_k"))
+)
+
+```
+
+
+Regular expression
+
+```{python}
+df_adj.with_columns((pl.col("^\w*price\w*$") / 1000).name.suffix("_k"))
+```
+
+
+
+Column selectors
+
+
+```{python}
+import polars.selectors as cs
+
+df_adj.select(cs.contains("price"))
+df_adj.select(cs.numeric())
+
+# Select columns by data type.
+df_adj.select(pl.col(pl.Int64))
+df_adj.select(pl.col(pl.Float64))
+df_adj.select(pl.col([pl.Int64, pl.Float64])) # all numeric
+df_adj.select(pl.col(pl.String))
+```
+
+
+## Convert between datatype
+
+
+```{python}
+(
+    df_adj.with_columns(pl.col("bedrooms").cast(pl.String))
+          .with_columns(pl.col("bedrooms").cast(pl.Int64))
+)
+
+```
+
+
+
+
+```{python}
+(
+    ggplot(data=df_adj, mapping=aes(x="bedrooms", y="area"))
+    + geom_violin()
+    +geom_jitter(color = "blue", alpha = .05)
+)
+```
+
+
+
+
+```{python}
+(
+    ggplot(data=df_adj, mapping=aes(x="area"))
+    + geom_density()
+    + facet_wrap(facets="bedrooms")
+)
+```
+
+
+
+
+# Unit 2 Day 2
+
+
+Lesson outcome
+
+- simple column aggregation, vertical summary statistic.
+- group_by() aggregation
+
+
+
+## Basic aggregation
+
+
+```{python}
+mykids = [22, 20, 17, 14, 12]
+sum(mykids)
+```
+
+
+
+
+
+```{python}
+df.select(pl.col("price").median())
+# to get the # without the dataframe structure
+df.select(pl.col("price").median().item())
+```
+
+
+multiple calculations in one step
+
+
+```{python}
+df.select(
+    pl.col("price").median().alias("med_price"),
+    pl.col("price").max().alias("max_price"),
+    (pl.col(["area", "bedrooms"]).mean()).name.suffix("_mean")
+)
+```
+
+
+
+Ne need to recreate the wheel
+
+
+
+
+```{python}
+df.describe()
+```
+
+
+
+# group_by().agg()
+
+
+```{python}
+df.group_by("bedrooms").agg(
+    pl.mean("area", "stories"), 
+    pl.max("price").alias("max_price"),
+    pl.len()
+)
+```
+
+
+
+Repeat the calculation but with different syntax
+```{python}
+df.group_by("bedrooms").agg(
+    pl.col(["area", "stories"]).mean(),
+    pl.col("price").max().alias("max_price"),
+    pl.len()
+)
+```
+
+
+
+## Lest columns and conditional calculations
+
+
+
+
+```{python}
+(
+    df.group_by("bedrooms")
+      .agg(
+        pl.col("guestroom").alias("popcorn"),
+        (pl.col("guestroom") == "yes").sum(),
+        (pl.col("guestroom") == "yes").mean().alias("prop"),
+    )
+)
+```
+
+
+
+
+## nested group_by
+
+
+
+
+```{python}
+(
+    df.group_by("bedrooms", "bathrooms")
+      .agg(
+        pl.col("price").median(),
+        pl.len()
+      )
+)
+
+```
+
+
+# over()
+
+```{python}
+(
+    df.with_columns(
+        pl.col("price").median().over("bedrooms", "bathrooms").alias("med_price")`
+    )
+)
+```

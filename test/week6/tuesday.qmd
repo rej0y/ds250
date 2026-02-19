@@ -1,0 +1,120 @@
+---
+title: "Untitled"
+format: html
+---
+
+```{python}
+import polars as pl
+import requests #new for reading in JSON
+import io       #new for reading in JSON
+import numpy as np
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+
+```{python}
+df = pl.DataFrame({
+    "A": ["X", "B", "C", "X", None],
+    "B": [1, 2, 3, 1, -999],
+    "C": ["apple", "banana", "cherry", "apple", "n/a"]
+})
+```
+
+
+
+Key skills to learn:
+
+- Missing values:
+
+
+    - How to recognize them (None, null)
+    - Null vs. NaN
+    - fill_null() and fill_nan() options
+
+- How ot replace values generally in a dataframe
+
+
+    - pl.when().then().otherwise(). useful for ranges
+    - replace() and its variations
+
+- How to print to screen JSON format
+
+
+
+
+
+```{python}
+import polars.selectors as cs
+
+mapper1 = {"B": 10, "C": 20, "n/a": None, "X": 50}
+
+# Let's convert stuff to missing
+df.with_columns(
+    pl.when(pl.col("B") < 0)
+      .then(None)
+      .otherwise(pl.col("B"))
+      .alias("B-when"),
+    # pl.col("B").replace(-999, None),
+    # pl.col("A").replace(mapper1),
+    pl.col("A").replace_strict(mapper1) # strict converts datatype for you
+)
+```
+
+
+# How to fill in missing values
+
+
+```{python}
+df = pl.DataFrame({
+     "a": [1, 2, None, 3]
+    ,"b": [1.0, 2, float("nan"), None]
+    ,"c": [-999, 5, None, 11]
+})
+```
+
+
+
+```{python}
+df.with_columns(
+    # pl.all().fill_null(0).fill_nan(0),
+    pl.all().fill_nan(None).fill_null(0),
+)
+```
+
+
+
+```{python}
+df.with_columns(
+    pl.col("c").replace(-999, None)
+).with_columns(
+    # pl.col("c").fill_null(pl.col("c").median()),
+    pl.col(["a", "c"]).fill_null(strategy="mean")
+)
+```
+
+
+
+
+```{python}
+df.group_by("c").agg(pl.len()) # spits out the unique values and how often they occur
+```
+
+
+
+# Printing JSON
+
+
+
+```{python}
+import json
+
+whole_thing = df[2].to_dicts()
+print(json.dumps(whole_thing, indent=2))
+
+
+# OR
+print(df.write_ndjson())
+```
