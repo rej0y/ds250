@@ -1,0 +1,163 @@
+---
+title: "Client Report - Baseball Database"
+subtitle: "Unit 3 Task 1"
+author: "John Zhou"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+```{python}
+import polars as pl
+import numpy as np
+import sqlite3
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+# Learn morea about Code Cells: https://quarto.org/docs/reference/cells/cells-jupyter.html
+
+# Include and execute your code here
+sqlite_file = 'lahmansbaseballdb.sqlite'
+# this file must be in the same location as your .qmd or .py file
+con = sqlite3.connect(sqlite_file)
+```
+
+```{python}
+# Include and execute your code here
+
+# The code below uses some basic SQL code to read in the entire 'batting' table in the database and store it in a polars dataframe called 'results'. You must write polars code to manipulate the results dataframe to address the task.
+
+q = """
+    SELECT *
+    FROM batting
+    """
+results = pl.read_database(q, con, infer_schema_length=None) 
+# What does infer_schema_length = None do?
+results
+
+
+r = """
+    SELECT *
+    FROM managers
+    """
+
+managers = pl.read_database(r, con, infer_schema_length=None)
+```
+
+
+Let's try to answer, "who is the best manager," based on their winning percentage?
+
+
+
+```{python}
+(
+    managers.group_by("playerID")
+            .agg(
+                (pl.col("W").sum() / pl.col("G").sum()).alias("win_%"),
+                pl.col("G").sum().alias("games"),
+                pl.col("yearID").min().alias("start_yr")
+            )
+            .filter(pl.col("games") > 50, pl.col("start_yr") > 1970)
+            
+).sort(pl.col("win_%"), descending=True)
+```
+
+
+
+
+```{python}
+(
+    managers.group_by("playerID", "yearID")
+            .agg(
+                (pl.col("W").sum() / pl.col("G").sum()).alias("win_%"),
+                pl.col("G").sum().alias("games"),
+                pl.col("yearID").min().alias("start_yr")
+            )
+            .filter(pl.col("games") > 50, pl.col("start_yr") > 1970)
+            
+).sort(pl.col("win_%"), descending=True)
+```
+
+
+
+
+
+```{python}
+r = """
+    SELECT playerID
+        ,  G as 'games'
+        ,  W as 'wins'
+        ,  (W * 1.0 / G) as 'win_percent'
+        ,  (W / G) * 1.0 as 'bad_result'
+        ,  (cast(W as float) / G) as 'casted'
+    FROM managers
+    """
+
+managers = pl.read_database(r, con, infer_schema_length=None)
+managers
+```
+
+
+
+
+```{python}
+r = """
+    SELECT playerID
+         , yearID
+         , G as 'games'
+         , W as 'wins'
+         , round(W * 1.0 / G, 3) as 'win_percent'
+    FROM managers
+    WHERE games > 100
+    AND yearID > 1920
+    ORDER BY win_percent DESC, games DESC
+    """
+
+managers = pl.read_database(r, con, infer_schema_length=None)
+managers
+```
+
+
+Let's look over a manager's entire career instead of just who had the best season
+
+
+```{python}
+r = """
+    SELECT   playerID
+           , min(yearID) as 'year'
+        -- , count(playerID)
+           , sum(G) as 'games'
+           , sum(W) as 'wins'
+           , round(sum(W) * 1.0 / sum(G), 3) as 'win_percent'
+        -- , avg(W * 1.0 / G) as 'bad_result'
+    FROM     managers
+    GROUP BY playerID
+    HAVING   games > 100 AND year > 1920
+    ORDER BY win_percent DESC
+    """
+
+managers = pl.read_database(r, con, infer_schema_length=None)
+managers
+```

@@ -64,14 +64,29 @@ __Use the provided code above to read in the batting table. Then, with Python Po
 
 Note: A batting average is meant to measure how often a player puts the ball in play and gets to base safely. For this task, use a simplified version of batting average defined as the sum of hits (labeled 'H') divided by number of at bats (labeled 'AB').
 
-_type your results and analysis here_
+_According to the output, we can see that the top 5 with batting average and at least 10 at-bats are "nymanny01" in 1974, "carsoma01" in 2013, "altizda01" in 1910, "silvech01" in 1948, and "puccige01" in 1930._
 
 ```{python}
 # Include and execute your code here
-
+(
+  results
+  .group_by(pl.col("playerID"), pl.col("yearID"))
+  .agg([
+    pl.col("H").sum().alias("hits"),
+    pl.col("AB").sum().alias("at_bats")
+  ])
+  .with_columns(
+    (pl.col("hits") / pl.col("at_bats")).alias("batting_avg")
+  )
+  .filter(pl.col("at_bats") >= 10)
+  .sort(
+    by=["batting_avg", "playerID"],
+    descending=[True, False]
+  )
+  .head(5)
+)
 
 ```
-
 
 ## QUESTION 2
 
@@ -79,11 +94,27 @@ __Use the provided code above to read in the batting table. Then, with Python Po
 
 Note: A batting average is meant to measure how often a player puts the ball in play and gets to base safely. For this task, use a simplified version of batting average defined as the sum of hits (labeled 'H') divided by number of at bats (labeled 'AB').
 
-_type your results and analysis here_
+_According to the output, we can see that the top 5 player IDs that have the most batting averages and at-bats of at least 100 in their entire careers are "cobbty01" with 0.366299, "barnero01" with 0.359682, "hornsro01" with 0.358497, "jacksjo01" with 0.355752, and "meyerle01" with 0.355509._
 
 ```{python}
 # Include and execute your code here
-
+(
+  results
+  .group_by(pl.col("playerID"))
+  .agg([
+    pl.col("H").sum().alias("total_hits"),
+    pl.col("AB").sum().alias("total_at_bats")
+  ])
+  .with_columns(
+    (pl.col("total_hits") / pl.col("total_at_bats")).alias("total_batting_avg")
+  )
+  .filter(pl.col("total_at_bats") >= 100)
+  .sort(
+    by=["total_batting_avg", "playerID"],
+    descending=[True, False]
+  )
+  .head(5)
+)
 
 ```
 

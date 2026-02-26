@@ -1,0 +1,114 @@
+---
+title: "Client Report - Joins"
+subtitle: "Unit 3 Task 3"
+author: "John Zhou"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+```{python}
+import polars as pl
+import numpy as np
+import sqlite3
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+# Learn morea about Code Cells: https://quarto.org/docs/reference/cells/cells-jupyter.html
+
+# Include and execute your code here
+sqlite_file = 'lahmansbaseballdb.sqlite'
+# this file must be in the same location as your .qmd or .py file
+con = sqlite3.connect(sqlite_file)
+```
+
+## QUESTION 1
+
+__Write an SQL query that pulls in the the salaries table and the collegeplaying table (and any other tables you might need) and store them in polars dataframes. In Python Polars, combine the dataframes to create a list of baseball players who attended BYU-Idaho. The new table should contain five columns: playerID, schoolID, salary, yearID and teamID associated with each salary.__
+
+_According to the graph, we can see that there are only two player IDs that attended BYUI in the salary table, which are stephga01 and lindsma01; we can see the salary of the first person increase then drop, and the salary of the second person continuously increase._
+
+```{python}
+# Include and execute your code here
+college = """
+              SELECT playerID, schoolID
+              FROM   collegeplaying
+          """
+salaries = """
+              SELECT yearID, teamID, playerID, salary
+              FROM   salaries
+           """
+
+college_df = pl.read_database(college, con, infer_schema_length=10000)
+salaries_df = pl.read_database(salaries, con, infer_schema_length=10000)
+
+byui = college_df.filter(pl.col("schoolID") == "idbyuid").unique()
+
+result = (
+    byui.join(
+        salaries_df,
+        on = "playerID",
+        how = "inner"
+    )
+)
+pl.Config.set_tbl_rows(-1)
+result
+```
+
+
+## QUESTION 2
+
+1. Pick any two baseball teams and compare them using a metric of your choice (average salary, home runs, number of wins, etc). Be creative! Write an SQL query to read in the table(s) you need, then use polars to manipulate the data. Finally, make a graph using Lets-Plot to visualize the comparison. What do you learn?
+
+_I compared the teams New York Yankees and Boston Red Sox and their wins per year. According to the graph, we can see that BOS usually has fewer wins than NYA. Both teams are getting more wins, and we can see NYA has a decline between the years 1945 and 1980, whereas BOS is growing steadily after the year around 1930._
+
+```{python}
+# Include and execute your code here
+teams = """
+            SELECT yearID, teamID, W
+            FROM   teams
+        """
+teams_df = pl.read_database(teams, con, infer_schema_length=10000)
+
+nya_bos = (
+  teams_df.filter(
+    pl.col("teamID").is_in(["NYA", "BOS"])
+  )
+)
+
+(
+  ggplot(nya_bos, aes(x="yearID", y="W", color="teamID"))
+  + geom_line(alpha=0.5)
+  + geom_smooth(method="loess", size=1.5)
+  + labs(
+    x = "Year",
+    y = "Wins",
+    color = "Team",
+    title = "New York Yankees and Boston Red Sox Win More and More"
+  )
+)
+```
+
+
