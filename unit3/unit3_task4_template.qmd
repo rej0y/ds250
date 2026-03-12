@@ -1,0 +1,196 @@
+---
+title: "Client Report - Longevity and Highest Paid Positions"
+subtitle: "Unit 3 Task 4"
+author: "John Zhou"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+```{python}
+import polars as pl
+import numpy as np
+import sqlite3
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+# Learn morea about Code Cells: https://quarto.org/docs/reference/cells/cells-jupyter.html
+
+# Include and execute your code here
+sqlite_file = 'lahmansbaseballdb.sqlite'
+# this file must be in the same location as your .qmd or .py file
+con = sqlite3.connect(sqlite_file)
+```
+
+## QUESTION 1
+
+__Identify the top 10 players with the longest Major League Baseball careers. Include their:__
+
+- playerID
+- first_name
+- last_name
+- career_length
+
+_Below are the top 10 players ranked by longest career._
+
+```{python}
+# Include and execute your code here
+appearances = """
+                SELECT playerID, yearID
+                FROM   Appearances
+              """
+people = """
+            SELECT playerID, nameFirst, nameLast
+            FROM   People
+         """
+
+appearances_df = pl.read_database(appearances, con)
+people_df = pl.read_database(people, con)
+
+career_length = (
+  appearances_df
+  .group_by("playerID")
+  .agg(
+    (pl.col("yearID").max() - pl.col("yearID").min() + 1)
+    .alias("career_length")
+  )
+)
+
+(
+  career_length
+  .join(
+    people_df,
+    on = "playerID",
+    how = "inner"
+  )
+  .sort(
+    "career_length",
+    descending = True
+  )
+  .select(
+    "playerID",
+    pl.col("nameFirst").alias("first_name"),
+    pl.col("nameLast").alias("last_name"),
+    "career_length"
+  )
+  .head(10)
+)
+
+```
+
+
+## QUESTION 2
+
+__Write an SQL query that pulls the tables you need into a polars dataframe. Then, use python polars to create a summary table showing the average salary for each position (e.g., pitcher, catcher, outfielder). Position information can be found in the fielding table in the POS column.__
+
+Include the following columns:
+
+- position
+- average_salary
+- total_players
+- highest_salary
+
+The highest_salary column should display the highest salary ever earned by a player in that position.
+
+- Additionally, add a new column to the summary table you just created to label the average salary:
+  - If the average salary is above $3 million, categorize it as “High Salary.”
+  - If the average salary is between $2 million and $3 million, categorize it as “Medium Salary.”
+  - Otherwise, categorize it as “Low Salary.”
+
+Order the table by average salary in descending order.
+
+_I pulled the salaries and fielding table from the database, cleaned the fielding table to one player per year per position, joined them, calculated the average salary, total players, and highest salary, and added a new salary label column and sorted them by average salary._
+
+```{python}
+# Include and execute your code here
+salaries = """
+            SELECT playerID, yearID, salary
+            FROM   Salaries
+           """
+fielding = """
+            SELECT playerID, yearID, POS, G
+            FROM   Fielding
+           """
+
+salaries_df = pl.read_database(salaries, con)
+fielding_df = pl.read_database(fielding, con)
+
+fielding_unique = (
+  fielding_df
+  .group_by(["playerID", "yearID", "POS"])
+  .agg(pl.col("G").sum().alias("G"))
+  .sort(
+    ["playerID", "yearID", "G"],
+    descending = [False, False, True]
+  )
+  .unique(
+    subset = ["playerID", "yearID"],
+    keep = "first"
+  )
+  .drop("G")
+)
+
+salaries_position = (
+  salaries_df.join(
+    fielding_unique,
+    on = ["playerID", "yearID"],
+    how = "inner"
+  )
+)
+
+position_group = (
+  salaries_position.group_by("POS")
+  .agg([
+    pl.col("salary").mean().alias("average_salary"),
+    pl.col("playerID").n_unique().alias("total_players"),
+    pl.col("salary").max().alias("highest_salary")
+  ])
+  .rename({"POS": "position"})
+)
+
+position_label = (
+  position_group
+  .with_columns(
+    pl.when(pl.col("average_salary") > 3_000_000)
+      .then(pl.lit("High Salary"))
+      .when((pl.col("average_salary")).is_between(2_000_000, 3_000_000, closed="both"))
+      .then(pl.lit("Medium Salary"))
+      .otherwise(pl.lit("Low Salary"))
+      .alias("salary_label")
+  )
+)
+
+result = (
+  position_label
+  .sort(
+    "average_salary",
+    descending = True
+  )
+)
+
+result
+```
+
+

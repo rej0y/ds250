@@ -15,6 +15,7 @@
         "pyyaml",
         "scikit",
         "setuptools",
+        "sklearn",
         "unpivot",
         "venv",
         "vline"
