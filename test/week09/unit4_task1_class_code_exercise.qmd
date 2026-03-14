@@ -223,3 +223,42 @@ ggplot(
     ) + geom_violin() + geom_jitter(alpha = .05)
 )
 ```
+
+
+## Let's do an XGBoost model 
+
+
+Might need to install the library: `pip install xgboost`
+
+
+
+```{python}
+import xgboost as xgb
+from xgboost import XGBClassifier
+
+x = df_cleaned.select(pl.exclude(["airport_code", "airport_name", "month"]))
+
+y_slc = df_cleaned.select(
+    pl.when(
+        pl.col("airport_code") == "SLC"
+    )
+    .then(1)
+    .otherwise(0)
+)
+```
+
+
+
+```{python}
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+
+x_train, x_test, y_train, y_test = train_test_split(x, y_slc, test_size=0.2, random_state=42)
+
+
+my_xgb = XGBClassifier()
+my_xgb.fit(x_train, y_train)
+pred = my_xgb.predict(x_test)
+print(classification_report(y_test, pred))
+```

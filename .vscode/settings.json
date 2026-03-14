@@ -18,6 +18,7 @@
         "sklearn",
         "unpivot",
         "venv",
-        "vline"
+        "vline",
+        "xgboost"
     ]
 }

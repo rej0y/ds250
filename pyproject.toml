@@ -15,6 +15,7 @@ dependencies = [
   "setuptools",
   "jupyter",
   "pyarrow",
+  "xgboost",
 ]
 
 [build-system]
