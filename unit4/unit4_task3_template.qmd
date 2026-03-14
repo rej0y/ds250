@@ -1,7 +1,7 @@
 ---
 title: "Client Report - Show me!"
 subtitle: "Unit 4 Task 3"
-author: "[STUDENT NAME]"
+author: "Shengjian Zhou"
 format:
   html:
     self-contained: true
@@ -39,7 +39,7 @@ LetsPlot.setup_html(isolated_frame=True)
 
 ```{python}
 # import your data here using polars and the URL
-
+df = pl.read_csv("dwellings_ml.csv")
 
 ```
 
@@ -47,23 +47,161 @@ LetsPlot.setup_html(isolated_frame=True)
 
 1. __Repeat the classification exercise using 2 different algorithms/models. Explain the differences between the 3 models__ (your original one, and the 2 new ones for this task).
 
-_type your write-up and analysis here_
+_XGBoost Classifier: Sequentially build small decision trees; new trees try to focus on the mistakes of the previous one and build better trees._
+
+_Random Forest Classifier: Randomly build a lot of decision trees. Each tree is given different data and columns; the total votes of all of the trees are the answer to the prediction._
+
+_Logistic Regression Classifier: A linear model that calculates the probability of the attributes and regressively adds them together to produce the total probability._
 
 ```{python}
 # Include and execute your code here
+from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report
+from sklearn.inspection import permutation_importance
 
+df_clean = (
+  df.drop(["yrbuilt", "parcel"])
+)
 
+x = df_clean.drop("before1980")
+y = df_clean.select("before1980")
+
+x_train, x_test, y_train, y_test = train_test_split(
+  x, y,
+  test_size=0.2,
+  random_state=42
+)
+
+xgb_classifier = XGBClassifier(
+  random_state=42
+)
+
+forest_classifier = RandomForestClassifier(
+  n_estimators=200,
+  random_state=42
+)
+
+regression_classifier = LogisticRegression(
+  max_iter=1000,
+  random_state=42
+)
+
+xgb_classifier.fit(x_train, y_train)
+forest_classifier.fit(x_train, y_train)
+regression_classifier.fit(x_train, y_train)
+
+xgb_pred = xgb_classifier.predict(x_test)
+forest_pred = forest_classifier.predict(x_test)
+regression_pred = regression_classifier.predict(x_test)
+
+xgb_importance = (
+  permutation_importance(
+    xgb_classifier,
+    x_test,
+    y_test,
+    n_repeats=10,
+    random_state=42
+  )
+)
+
+forest_importance = (
+  permutation_importance(
+    forest_classifier,
+    x_test,
+    y_test,
+    n_repeats=10,
+    random_state=42
+  )
+)
+
+regression_importance = (
+  permutation_importance(
+    regression_classifier,
+    x_test,
+    y_test,
+    n_repeats=10,
+    random_state=42
+  )
+)
+
+xgb_importance_df = (
+  pl.DataFrame({
+    "feature": x.columns,
+    "importance": xgb_importance.importances_mean
+  })
+  .sort("importance").tail(20)
+)
+
+forest_importance_df = (
+  pl.DataFrame({
+    "feature": x.columns,
+    "importance": forest_importance.importances_mean
+  })
+  .sort("importance").tail(20)
+)
+
+regression_importance_df = (
+  pl.DataFrame({
+    "feature": x.columns,
+    "importance": regression_importance.importances_mean
+  })
+  .sort("importance").tail(20)
+)
 ```
-
 
 ## QUESTION 2
 
 1. For each model (your original one, and the 2 new ones for this task), display the classification report and the permutation importances for the most important features.  Discuss which model you would recommend to the Client and why.
 
-_type your write-up and analysis here_
+_According to the result, we can see that the XGBoost Classifier is slightly better than the Random Forest, but the Logistic Regression does not perform as well as those two classifiers, which could mean that the data is not linear and decision tree-based classifiers could be better at solving complex relationships. We can see that the tax-assessed selling price is actually the most important feature of the regression classifier, which is a false statement. And according to the score, I would recommend the XGBoost classifier for the best result._
 
+- XGBoost Classifier
 ```{python}
 # Include and execute your code here
+print(classification_report(y_test, xgb_pred))
 
+(
+  ggplot(
+    xgb_importance_df,
+    aes(
+      x="importance",
+      y="feature"
+    )
+  )
+  + geom_bar(stat="identity")
+)
+```
 
+- Random Forest Classifier
+```{python}
+print(classification_report(y_test, forest_pred))
+
+(
+  ggplot(
+    forest_importance_df,
+    aes(
+      x="importance",
+      y="feature"
+    )
+  )
+  + geom_bar(stat="identity")
+)
+```
+
+- Logistic Regression Classifier
+```{python}
+print(classification_report(y_test, regression_pred))
+
+(
+  ggplot(
+    regression_importance_df,
+    aes(
+      x="importance",
+      y="feature"
+    )
+  )
+  + geom_bar(stat="identity")
+)
 ```
