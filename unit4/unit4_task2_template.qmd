@@ -47,7 +47,7 @@ df = pl.read_csv("dwellings_ml.csv")
 
 1. __Describe the quality of your classification model using 2-3 different evaluation metrics.__ You also need to explain how to define/interpret each of the evaluation metrics you use.  
 
-_type your write-up and analysis here_
+_The XGBoost classification model performed very well, achieving an overall accuracy of 93%. Precision for homes built before 1980 was 94%, meaning predictions of older homes were highly reliable. Recall for that same class was 95%, indicating that most true pre-1980 homes were correctly identified. The F1-score of 0.95 confirms strong balanced performance between precision and recall. Because the public health goal is to identify potentially asbestos-risk homes, recall is especially important since missing older homes could reduce safety screening effectiveness._
 
 ```{python}
 # Include and execute your code here
@@ -83,22 +83,88 @@ print(classification_report(y_test, pred))
 
 1. __Justify your classification model by discussing the most important features selected by your model.__ This discussion should include a plot of permutation importance values for the most important features. Were there any features you thought would be importance but weren't?
 
-_type your write-up and analysis here_
+_According to the graph, we can see that the number of stories, specifically one, is the most important feature, followed by the bathroom number, which I didn't expect before; followed by the living area; and the fourth is the basement number, which I also didn't expect before; followed by the quality, so we can see that the house quality has a relationship with the build year. Surprisingly, the garage area (nocars) is not a very significant feature of the year built._
 
 ```{python}
 # Include and execute your code here
+from sklearn.inspection import permutation_importance
 
+result = (
+  permutation_importance(
+    xgb_classifier,
+    x_test,
+    y_test,
+    n_repeats=10,
+    random_state=42
+  )
+)
 
+importance_df = (
+  pl.DataFrame({
+    "feature": x.columns,
+    "importance": result.importances_mean
+  })
+  .sort("importance").tail(20)
+)
+
+(
+  ggplot(
+    importance_df,
+    aes(
+      x="importance",
+      y="feature"
+    )
+  )
+  + geom_bar(stat="identity")
+)
 ```
 
 ## QUESTION 3
 
 1. __For the 3 most important features, explain their relationship to the target variable. Use a plot to illustrate the relationship.__ (3 plots minimum)
 
-_type your write-up and analysis here_
+_For the one-story variable, we can clearly see that houses built after 1980 are unlikely to be one-story, while those built before 1980 show no strong correlation; regarding bathroom numbers, houses built before 1980 tend to have 1 or 2 bathrooms, whereas those built after tend to have 3 bathrooms. And for the live area between 0 and 5000, we can see that the house built before 1980 is more likely to have exactly 1000 square feet, and the houses that were built after that do not have this trend._
 
 ```{python}
 # Include and execute your code here
+(
+  ggplot(
+    df,
+    aes(
+      x="before1980",
+      y="arcstyle_ONE-STORY"
+    )
+  )
+  + geom_violin()
+  + geom_jitter(alpha=0.3, size=0.5)
+)
+```
 
+```{python}
+(
+  ggplot(
+    df,
+    aes(
+      x="before1980",
+      y="numbaths"
+    )
+  )
+  + geom_boxplot()
+  + geom_jitter(alpha=0.3, size=0.5)
+)
+```
 
+```{python}
+(
+  ggplot(
+    df,
+    aes(
+      x="before1980",
+      y="livearea"
+    )
+  )
+  + geom_violin()
+  + geom_jitter(alpha=0.5, size=0.5)
+  + ylim(0, 5000)
+)
 ```
