@@ -205,3 +205,16 @@ print(classification_report(y_test, regression_pred))
   + geom_bar(stat="identity")
 )
 ```
+
+
+
+
+
+
+```{python}
+from sklearn.ensemble._hist_gradient_boosting.gradient_boosting import HistGradientBoostingRegressor()
+
+
+my_mod = HistGradientBoostingRegressor()
+my_mod.fit(x_train, y_train)
+```

@@ -1,0 +1,453 @@
+---
+title: "Client Report - Can You Predict That?"
+subtitle: "Unit 4 Task 1"
+author: "[STUDENT NAME]"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+After reviewing the slides in the Day 2 section of the PowerPoint you can do this coding.
+
+Pull up the classification report and talk through the results in context of the flights activity that was done last time.
+
+## Day 1 activity completed
+```{python}
+import sklearn
+import polars as pl
+import numpy as np
+import requests #for reading in JSON
+import io       #for reading in JSON
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+Start with the flights data, then clean it up.
+
+```{python}
+url = "https://raw.githubusercontent.com/byuidatascience/data4missing/master/data-raw/flights_missing/flights_missing.json"
+
+response = requests.get(url)
+
+df = pl.read_json(io.BytesIO(response.content))
+```
+
+### Prep the data
+
+```{python}
+import polars.selectors as cs
+
+df_missing = df.with_columns(
+                 pl.col('month').replace("n/a", None)
+                ,pl.col('num_of_delays_carrier').replace('1500+', 1500).cast(pl.Int64)
+                ,cs.numeric().replace(-999, None)
+)
+```
+
+
+```{python}
+# replace all the missing values in the numeric columns with their respective mean
+df_cleaned = (df_missing.with_columns(pl.col('year').fill_null(strategy = 'forward'))
+                        .with_columns(cs.numeric().fill_null(strategy = 'mean')) 
+             )
+```
+
+### Partition the data 
+
+```{python}
+from sklearn.model_selection import train_test_split
+
+x = df_cleaned.select(pl.exclude(['airport_code', 'airport_name','month'])) 
+
+y = df_cleaned.select('airport_code')
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+```
+
+
+### Start with a Random Forest classifier
+
+The forest predicts a number instead of a category. The biggest change here is the metrics used to evaluate the model. Everything else is very similar.
+
+You can explain the idea of an ensemble approach and watch this video: https://www.youtube.com/watch?v=J4Wdy0Wc_xQ
+
+```{python}
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.tree import DecisionTreeClassifier
+
+#my_mod = GradientBoostingRegressor()
+clf = DecisionTreeClassifier()
+clf.fit(x_train, y_train) #fit the model
+pred = clf.predict(x_test)
+```
+
+```{python}
+from sklearn.metrics import classification_report
+print(classification_report(y_test, pred))
+```
+
+# Permutation Importances
+
+
+```{python}
+from sklearn.inspection import permutation_importance
+
+results = permutation_importance(clf, x_test, y_test, 
+                       n_repeats = 3, random_state = 17)
+
+df_importances = pl.DataFrame({
+  'perm_imp' : results.importances_mean,
+  'variables': x_test.columns,
+
+}).sort('perm_imp', descending=True)
+
+df_importances
+```
+
+
+```{python}
+ggplot(data= df_importances,
+      mapping = aes(x = 'perm_imp', 
+                    y = 'variables')) + geom_bar(stat = 'identity')
+```
+
+Let's look at the relationship between num_of_flights_total and the target variable, airport_code
+
+
+```{python}
+ggplot(data = df_cleaned,
+        mapping = aes(x = 'airport_code',
+                      y = 'num_of_flights_total')) + geom_boxplot()
+```
+
+## Let's do an XGBoost model
+
+May need to install a new library `pip install xgboost`
+
+
+```{python}
+import xgboost as xgb
+from xgboost import XGBClassifier
+
+x = df_cleaned.select(pl.exclude(['airport_code', 'airport_name','month'])) 
+
+y = df_cleaned.select(pl.when(pl.col('airport_code') == 'SLC')
+                        .then(1)
+                        .otherwise(0)
+)
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+
+
+my_xgb = XGBClassifier()
+my_xgb.fit(x_train, y_train)
+pred = my_xgb.predict(x_test)
+print(classification_report(y_test, pred))
+```
+
+
+```{python}
+results2 = permutation_importance(my_xgb, x_test, y_test, 
+                       n_repeats = 3, random_state = 17)
+
+df_importances = pl.DataFrame({
+  'perm_imp' : results.importances_mean,
+  'variables': x_test.columns,
+  'xgb_imp'  : results2.importances_mean
+  
+}).sort('perm_imp', descending=True)
+
+df_importances
+```
+
+
+
+
+
+```{python}
+import sklearn
+import polars as pl
+import numpy as np
+import requests #for reading in JSON
+import io       #for reading in JSON
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+Start with the flights data, then clean it up.
+
+```{python}
+url = "https://raw.githubusercontent.com/byuidatascience/data4missing/master/data-raw/flights_missing/flights_missing.json"
+
+response = requests.get(url)
+
+df = pl.read_json(io.BytesIO(response.content))
+```
+
+
+```{python}
+import polars.selectors as cs
+
+df_missing = df.with_columns(
+                 pl.col('month').replace("n/a", None)
+                ,pl.col('num_of_delays_carrier').replace('1500+', 1500).cast(pl.Int64)
+                ,cs.numeric().replace(-999, None)
+)
+```
+
+
+```{python}
+# replace all the missing values in the numeric columns with their respective mean
+df_cleaned = (df_missing.with_columns(pl.col('year').fill_null(strategy = 'forward'))
+                        .with_columns(cs.numeric().fill_null(strategy = 'mean')) 
+             )
+
+```
+
+```{python}
+from sklearn.model_selection import train_test_split
+
+x = df_cleaned.select(pl.exclude(['airport_code', 'airport_name','month'])) 
+
+y = df_cleaned.select('airport_code')
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{python}
+import sklearn
+import polars as pl
+import numpy as np
+import requests #for reading in JSON\
+import io       #for reading in JSON
+from lets_plot import *
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+Let's use the flights data since we are already familiar with it. 
+
+We can try to __predict what airport__ a row's information is from based on the information.
+
+```{python}
+url = "https://raw.githubusercontent.com/byuidatascience/data4missing/master/data-raw/flights_missing/flights_missing.json"
+
+response = requests.get(url)
+
+df = pl.read_json(io.BytesIO(response.content))
+```
+
+## Prep the data
+
+We'll first read in and clean the data. This is something you should be familiar with by now. Fill in the **** with the correct command or function to make the code run.
+
+```{python}
+import polars.selectors as cs
+
+df_missing = df.with_columns(
+                 pl.col('month').replace("n/a", None)
+                ,pl.col('num_of_delays_carrier').replace('1500+', 1500).cast(pl.Int64)
+                ,cs.numeric().replace(-999, None)
+)
+```
+
+
+Many machine learning models cannot handle missing data very well. Some of them will throw out the whole row of data if any of the columns have a missing value. Our dataset is small, but you can imagine if you have 50 or 100 columns, it would not be surprising for each row to have at least 1 missing value. You might end up throwing out most of your data. One way to impute the missing values is by replacing missing values with the mean for that variable. 
+
+*Note: you could have a whole course about missing values. This is a very basic approach to fixing the missing data so that we can get a model to run.
+
+```{python}
+# replace all the missing values in the numeric columns with their respective mean
+df_cleaned = df_missing.with_columns(cs.numeric().fill_null(strategy = 'mean'))
+
+# Later we will drop the month column, therefore the missing values in that column won't be a problem.
+# Therefore, just ignore the missing values in the month column for now
+
+```
+
+## Partition the data
+
+Now the dataset is cleaned, I can partition it according to: feature variables (x) and the target variable (y).
+
+The features are considered the model inputs, or x's. They are the information I anticipate having and using to make a prediction. The target will contain the true, or actual, result observed - commonly thought of the as the y variable.
+
+Many/most machine learning models cannot receive categorical variables as features (i.e. x variables). In the next unit we will learn how to handle categorical variables, but for now we will simply exclude them.
+
+```{python}
+# write code on the right side of the equal sign that will return only the numeric variables
+x = df_cleaned.select(cs.numeric())
+
+y = df_cleaned.select('airport_code')
+```
+
+**CAUTION**: Be sure to exclude the target variable from your 'x' dataset. You also need to exclude any variable that has 100% correlation with the target. If you get nearly perfect prediction at the end of the ML process, it is probably because you forgot to take this step.
+
+Many datasets also have an ID # for each row. If each ID number is unique, there will not be any ID's in the training dataset repeated in the test dataset. Therefore, including ID number in the features (a.k.a. x dataset) is not helpful and just introduces random noise. In these cases, the column containing ID number should also be dropped. 
+
+Run the following code chunk just to verify the number of rows and columns in each object, x and y, match your expectations.
+
+```{python}
+print(x.shape)
+print(y.shape)
+```
+
+We will now do additional partitions to split the x and y objects into a training set and a test set.
+
+"Training set" is the data given to the machine learning algorithm to learn from. It will estimate parameters and learn relationships that help it make good predictions.
+
+The "test" dataset, also called the "hold out" dataset, is something we set aside to assess how well our model performed. After we see how well the model performed, we are not allowed to go back and fix/adjust the model (that would defeat the purpose of having a "hold out" dataset).
+
+Think of the gospel context, when something is consecrated, it is set apart for a holy purpose. You should consider your "test" dataset sacred. :)
+
+Splitting a dataset by these two dimensions creates 4 separate partitions:
+
+- x train
+- x test
+- y train
+- y test
+
+Fill in the **** with the correct command. If you aren't sure what commands to use, reference the [classifiers section](https://byuidatascience.github.io/DS250-Course-Draft/Course%20Materials/ml.html#classifiers) of the assigned reading Machine Learning Introduction.
+
+The command below takes the x and y objects and splits it into 4. It puts 20% of the data into the test group, and 80% into the training set. Common values for the percent of data in the test set range from 10-30%.
+
+```{python}
+from sklearn.model_selection import train_test_split
+
+# You can name the 4 objects anything you like. These names are pretty standard though
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=26)
+
+# You can use these two commands to check the size of the 4 objects and verify they meet your expectations
+print(x_train.shape, y_train.shape)
+print(x_test.shape, y_test.shape)
+
+
+```
+
+
+
+
+```{python}
+from sklearn.ensemble._hist_gradient_boosting.gradient_boosting import HistGradientBoostingRegressor
+
+
+my_mod = HistGradientBoostingRegressor()
+my_mod.fit(x_train, y_train)
+preds = my_mod.predict(x_test)
+```
+
+
+
+
+```{python}
+from sklearn.metrics import mean_squared_error, root_mean_squared_error, mean_absolute_error, r2_score
+
+
+mse = mean_squared_error(y_test, preds)
+rmse = root_mean_squared_error(y_test, preds)
+mae = mean_absolute_error(y_test, preds)
+rsquared = r2_score(y_test, preds)
+
+
+
+
+print(f"The MSE is {mse:.0f}")
+print(f"The RMSE is {rmse:.0f}")
+print(f"The MAE is {mae:.0f}")
+print(f"The r squared is {rsquared:.0f}")
+```
+
+
+
+
+```{python}
+my_data = pl.DataFrame({
+  "predictions": my_mod.predict(x_test),
+  "observed": y_test
+}).with_columns(residuals = pl.col("observed") - pl.col("predictions"))
+
+
+
+my_data
+```
+
+
+
+
+
+
+```{python}
+var_names = pl.Series(df_cleaned.drop(["airport_code", "airport_name", "month"]).columns)
+
+
+
+df_corr = (
+  df_cleaned.drop(["airport_code", "airport_name", "month"])
+  .corr()
+  .with_columns(pl.all().round(2), rw_names = var_names)
+)
+```
+
+
+
+
+```{python}
+df_corr_long = df_corr.unpivot(index=rw_names, value_name="correlation")
+```
+
+
+
+```{python}
+(
+  ggplot(data=df_corr_long,
+          mapping=aes(x="rw_names", y="variable", fill="correlation"))
+  + geom_tile()
+
+)
+```
