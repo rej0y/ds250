@@ -1,0 +1,130 @@
+---
+title: "Client Report - Regression ML"
+subtitle: "Unit 4 Task 4"
+author: "Shengjian Zhou"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+```{python}
+import polars as pl
+import numpy as np
+from lets_plot import *
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+# add the additional libraries you need to import for ML here
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+```{python}
+# import your data here using polars and the URL
+dwellings = pl.read_csv("dwellings_ml.csv")
+dwellings_neighborhoods = pl.read_csv("dwellings_neighborhoods_ml.csv")
+
+```
+
+## QUESTION 1
+
+__Join the dwellings_neighborhoods_ml.csv data to the dwelling_ml.csv on the parcel column to create a new dataset. Duplicate the code for the model you recommended in the previous task above and update it to use this data. Explain the differences and if this changes the model you recommend to the Client.__
+
+_I joined the neighborhood dataset to the dwelling dataset using the parcel column so that neighborhood information could be included as additional predictor variables. I then retrained the XGBoost classifier, which was the best-performing model from the previous classification task._
+
+_After adding neighborhood variables, the model achieved 97% overall accuracy. Precision and recall were both high for both classes, indicating strong performance in predicting whether a home was built before 1980._
+
+_The neighborhood variables likely improved the model because location reflects historical development patterns in Denver, where certain neighborhoods contain older housing stock than others._
+
+_Because the model performs very well after including neighborhood data, I would still recommend XGBoost to the client and include neighborhood variables in the final production model._
+
+```{python}
+from xgboost import XGBClassifier
+from sklearn.metrics import classification_report
+
+joined_df = dwellings.join(
+  dwellings_neighborhoods,
+  on="parcel",
+  how="left"
+)
+
+joined_df_clean = (
+  joined_df.drop(["yrbuilt", "parcel"])
+)
+
+x = joined_df_clean.drop("before1980")
+y = joined_df_clean.select("before1980")
+
+x_train, x_test, y_train, y_test = train_test_split(
+  x, y,
+  test_size=0.2,
+  random_state=42
+)
+
+xgb_classifier = XGBClassifier(
+  random_state=42
+)
+
+xgb_classifier.fit(x_train, y_train)
+
+y_pred = xgb_classifier.predict(x_test)
+
+print(classification_report(y_test, y_pred))
+```
+
+## QUESTION 2
+
+__Can you build a model that predicts the year a house was built? Note this is a regression ML model, not a classifier. Report appropriate evaluation metrics for the model. Explain the model and the evaluation metrics you used to determine if the model is good.__
+
+_I used an XGBoost regression model to predict the exact year a house was built (`yrbuilt`). Unlike the earlier classification task, this model predicts a continuous numeric value instead of classifying homes as before or after 1980._
+
+_The model was evaluated using Mean Absolute Error (MAE), Root Mean Squared Error (RMSE), and R² score. The Mean Absolute Error was 8.89, meaning the model predicts the construction year within about 9 years on average. The Root Mean Squared Error was 14.43, which indicates that some larger prediction errors occur and are weighted more heavily. The R² score was 0.85, meaning the model explains 85% of the variation in house construction year._
+
+_These results suggest the model performs well and provides useful estimates for missing year-built values, although exact year prediction is naturally more difficult than binary classification because small differences in year still count as prediction error._
+
+```{python}
+from xgboost import XGBRegressor
+from sklearn.metrics import mean_squared_error, root_mean_squared_error, mean_absolute_error, r2_score
+
+x = joined_df.drop(["yrbuilt", "parcel", "before1980"])
+y = joined_df["yrbuilt"]
+
+x_train, x_test, y_train, y_test = train_test_split(
+  x, y,
+  test_size=0.2,
+  random_state=42
+)
+
+xgb_regressor = XGBRegressor(
+    random_state=42
+)
+
+xgb_regressor.fit(x_train, y_train)
+
+y_pred = xgb_regressor.predict(x_test)
+
+print("Mean Squared Error:", round(mean_squared_error(y_test, y_pred), 2))
+print("Root Mean Squared Error:", round(root_mean_squared_error(y_test, y_pred), 2))
+print("Mean Absolute Error:", round(mean_absolute_error(y_test, y_pred), 2))
+print("R Squared Score:", round(r2_score(y_test, y_pred), 2))
+```
+
+_Reference: [https://chatgpt.com/share/69bb584d-ac10-8005-9a0f-382dd5dda280](https://chatgpt.com/share/69bb584d-ac10-8005-9a0f-382dd5dda280)_

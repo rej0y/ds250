@@ -53,7 +53,7 @@ __Identify the top 10 players with the longest Major League Baseball careers. In
 - last_name
 - career_length
 
-_Below are the top 10 players ranked by longest career._
+_I grouped appearance records by playerID and calculated career length by subtracting each player’s first recorded season from their last recorded season and adding one. The results show that Nick Altrock had the longest career at 36 years, followed by several other players whose careers lasted more than 30 years. Many of the longest careers belong to earlier baseball eras, which may reflect differences in how careers were recorded, seasonal participation, or occasional return appearances across many years._
 
 ```{python}
 # Include and execute your code here
@@ -121,7 +121,7 @@ The highest_salary column should display the highest salary ever earned by a pla
 
 Order the table by average salary in descending order.
 
-_I pulled the salaries and fielding table from the database, cleaned the fielding table to one player per year per position, joined them, calculated the average salary, total players, and highest salary, and added a new salary label column and sorted them by average salary._
+_I joined salary and fielding data by player and year, then selected one primary position for each player based on the position with the most games played in that season so salaries were counted only once per year. After grouping by position, first basemen had the highest average salary, while pitchers had the largest number of players. Outfielders and third basemen also ranked relatively high, while catchers had lower average salaries. This may reflect the fact that first basemen are often strong offensive players and important contributors to run production, which can lead to larger contracts._
 
 ```{python}
 # Include and execute your code here
@@ -193,4 +193,8 @@ result = (
 result
 ```
 
+_Reference:_
 
+- _[https://chatgpt.com/share/69bb5f62-0040-8005-8cd4-633270f3df8f](https://chatgpt.com/share/69bb5f62-0040-8005-8cd4-633270f3df8f)_
+
+- _[https://chatgpt.com/share/69bb5e8e-8710-8005-929b-03741be6d7cb](https://chatgpt.com/share/69bb5e8e-8710-8005-929b-03741be6d7cb)_

@@ -49,7 +49,7 @@ con = sqlite3.connect(sqlite_file)
 
 __Write an SQL query that provides playerID, yearID, and batting average for players with at least 1 at bat that year. Sort the table from highest batting average to lowest, and then by playerid alphabetically. Show the top 5 results in your report.__
 
-_According to the output, we can see that the top 5 results are all 1.0, and the player ID was ordered alphabetically, starting with "a." It is probably because the player just did one or two hits, and they succeeded in that year._
+_According to the output, we can see that the top 5 results are all 100%, and the player ID was ordered alphabetically, starting with "a." It is probably because the player just did one or two hits, and they succeeded in that year._
 
 ```{python}
 # Include and execute your code here
@@ -59,11 +59,11 @@ _According to the output, we can see that the top 5 results are all 1.0, and the
 q = """
         SELECT   playerID
                , yearID
-               , 1.0 * SUM(H) / SUM(AB) AS batting_avg
+               , ROUND(100.0 * SUM(H) / SUM(AB), 2) AS batting_percentage
         FROM     batting
         GROUP BY playerID, yearID
         HAVING   SUM(AB) >= 1
-        ORDER BY batting_avg DESC
+        ORDER BY batting_percentage DESC
                , playerID ASC
         LIMIT    5
     """
@@ -76,18 +76,18 @@ results
 
 __Use the same query as above, but only include players with at least 10 at bats that year. Print the top 5 results.__  
 
-_With at-bats greater than or equal to 10, we can see that we got more meaningful results, and the top 5 player IDs that have the most batting averages are nymanny01 with 0.642857, carsoma01 with 0.636364, altizda01 with 0.6, silvech01 with 0.571429, and puccige01 with 0.5625._
+_With at-bats greater than or equal to 10, we can see that we got more meaningful results, and the top 5 player IDs that have the most batting averages are nymanny01 with 64.29%, carsoma01 with 63.64%, altizda01 with 60%, silvech01 with 57.14%, and puccige01 with 56.25%._
 
 ```{python}
 # Include and execute your code here
 q = """
         SELECT   playerID
                , yearID
-               , 1.0 * SUM(H) / SUM(AB) AS batting_avg
+               , ROUND(100.0 * SUM(H) / SUM(AB), 2) AS batting_percentage
         FROM     batting
         GROUP BY playerID, yearID
         HAVING   SUM(AB) >= 10
-        ORDER BY batting_avg DESC
+        ORDER BY batting_percentage DESC
                , playerID ASC
         LIMIT    5
     """
@@ -101,17 +101,17 @@ results
 
 __Now modify the SQL query to calculate the batting average for players over their entire careers (all years combined). Only include players with at least 100 at bats over their entire career, and print the top 5 results.__
 
-_According to the result, we can see that the top 5 player IDs that have the most batting averages in their entire careers with at-bats of at least 100 are cobbty01 with 0.366299, barnero01 with 0.359682, hornsro01 with 0.358497, jacksjo01 with 0.355752, and meyerle01 with 0.355509._
+_According to the result, we can see that the top 5 player IDs that have the most batting averages in their entire careers with at-bats of at least 100 are cobbty01 with 36.63%, barnero01 with 35.97%, hornsro01 with 35.85%, jacksjo01 with 35.58%, and meyerle01 with 35.55%._
 
 ```{python}
 # Include and execute your code here
 q = """
         SELECT   playerID
-               , 1.0 * SUM(H) / SUM(AB) AS batting_avg
+               , ROUND(100.0 * SUM(H) / SUM(AB), 2) AS batting_percentage
         FROM     batting
         GROUP BY playerID
         HAVING   SUM(AB) >= 100
-        ORDER BY batting_avg DESC
+        ORDER BY batting_percentage DESC
                , playerID ASC
         LIMIT    5
     """

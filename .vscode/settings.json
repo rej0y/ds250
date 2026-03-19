@@ -20,6 +20,7 @@
         "unpivot",
         "venv",
         "vline",
-        "xgboost"
+        "xgboost",
+        "yrbuilt"
     ]
 }
