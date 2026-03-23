@@ -1,0 +1,105 @@
+---
+title: "Unit 5 Class 1: Regex"
+format: html
+---
+
+```{python}
+import polars as pl 
+import numpy as np
+from lets_plot import *
+# add the additional libraries you need to import for ML here
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+A regular expression (or "regex") is a specialized syntax used to define a search pattern for strings. Polars commands use regular expression: they perform an action when the expression matches what is in your text string. The regular expression can include literal characters or metacharacters. Example of metcharacters would be "any digit", or "any whitespace", or "a capital letter", and so on.
+
+Think of regex as a concise, declarative language for pattern matching that saves you from writing complex, nested loops and conditional logic.
+
+We will use this small and simple data set of names and phone numbers to practice using regular expressions in polars.
+
+```{python}
+phone = pl.DataFrame({
+    'name': [' Fay Ken Data', 'Fay k Data ', 'Fay K. Data.', "Fay K D'Ata", ' Fay Data ', 'Fay Kent Data'],
+    'ph'  : ['1234567890', '123 456 7890', '123-456-7890', '123.456.7890', '(123)456-7890', '+1 123 4567890']
+})
+```
+
+First, let's try to split the names so that we can capture the first, last, and middle names all in separate variables. Then, we will do a similar exercise and try to parse the phone numbers into an area code, next 3 digits, and the last 4 digits.
+
+
+
+```{python}
+phone2 = phone.with_columns(
+    # pl.col("ph").str.replace_all(" |-|\.|\(|\)|\+", "")
+    pl.col("ph")
+        .str.replace_all("\D", "") #\D is non-digit characters
+        .str.slice(-10) # Read the last 10 digits
+)
+phone2
+```
+
+
+```{python}
+phone3 = phone2.with_columns(
+    area_code = pl.col("ph").str.slice(offset=0, length=3),
+    next_3 = pl.col("ph").str.slice(offset=3, length=3),
+    last_4 = pl.col("ph").str.slice(offset=-4),
+)
+phone3
+```
+
+
+How we can try parse the names
+
+
+```{python}
+phone3.with_columns(
+    pl.col("name")
+        .str.strip_chars()
+        .str.split(by=" ")
+        # .list.to_struct(upper_bound=3)
+        .list.to_struct(fields=["f", "m", "l"])
+)
+
+# Abandon this approach because the data just isn't consistent enough.
+```
+
+
+```{python}
+phone3.with_columns(
+    pl.col("name")
+        .str.strip_chars()
+        .str.splitn(by=" ", n=3)
+        .struct.rename_fields(["f", "m", "l"])
+        # .list.to_struct(upper_bound=3)
+        # .list.to_struct(fields=["f", "m", "l"])
+)
+```
+
+
+```{python}
+(
+phone3
+    .with_columns(
+        pl.col("name")
+            .str.strip_chars()
+    )
+    .with_columns(
+        pl.col("name")
+            .str.extract("(\w+) ")
+            .alias("first"),
+
+        pl.col("name")
+            .str.extract(r" (\S+)$")
+            .alias("last"),
+            
+        pl.col("name")
+            .str.extract(r"^\w+ (\S*) \S+$")
+            .alias("middle"),
+    )
+)
+
+
+
+```

@@ -1,0 +1,150 @@
+---
+title: "Client Report - Star Wars for Dummies"
+subtitle: "Unit 5 Task 3"
+author: "Shengjian Zhou"
+format:
+  html:
+    self-contained: true
+    page-layout: full
+    title-block-banner: true
+    toc: true
+    toc-depth: 3
+    toc-location: body
+    number-sections: false
+    html-math-method: katex
+    code-fold: true
+    code-summary: "Show the code"
+    code-overflow: wrap
+    code-copy: hover
+    code-tools:
+        source: false
+        toggle: true
+        caption: See code
+execute: 
+  warning: false
+    
+---
+
+```{python}
+import polars as pl 
+import numpy as np
+from lets_plot import *
+# add the additional libraries you need to import for ML here
+
+LetsPlot.setup_html(isolated_frame=True)
+```
+
+
+<!-- Rather than a simple write up like we have been doing so far, this project requires a more structured approach. You will need to show you have completed the tasks, but will structure the report in a way that is more like a client report. The report will be structured as follows:
+
+ - Executive Summary: This is a high level overview of the analysis, including the problem statement, the data used, and the main findings. It should be concise and to the point, summarizing the key insights/recommendations without going into too much detail. These are usually bullet points, no graphs. PLEASE EXPLICITLY STATE IN THIS SECTION WHETHER YOU DID THE STRETCH OR NOT! 
+ - Methods: this is a high level overview of the methods used in the analysis. This should include an explanation of data preparation steps, especially how you dealt with each categorical variable and why. Showing the resulting or original distribution of variables may be helpful. Describe how you handled missing values and outliers. How did/might your decisions impact results?Explain any feature engineering steps you took. This is also where you will put the graphs you recreated to show you validated the dataset and that it matches the article.
+ - Results: this is a more in-depth explanation of results. A classification report and feature importance graphs belong here.
+ - Conclusion: this is where you will discuss the implication of the results, including any limitations of the analysis, and recommendations for actions/future work. It may feel repetitive to the executive summary, but it should be more detailed and include any additional insights you gained from the analysis. -->
+
+## Executive Summary
+
+_We cleaned a Star Wars survey dataset by removing extra metadata rows, extracting respondent names from email addresses, and standardizing inconsistent email-domain formatting. We then summarized the cleaned email information to identify domain usage patterns. This preparation makes the dataset more reliable for later analysis and modeling._
+
+
+
+## Methods
+
+_The dataset contained metadata before the actual table, so the first 10 rows were skipped when loading the file. Respondent names were reconstructed from the email field by separating the text before the @ symbol and replacing separators with spaces. To create more structured fields, regular expressions were used to extract first names and last names because the email names appeared in multiple formats, including periods, underscores, and embedded digits. Email domains were cleaned by trimming whitespace and converting text to lowercase so equivalent domains would not be counted separately._
+
+
+```{python}
+
+# Skip the first 10 rows to import the actual data.
+df = pl.read_csv("StarWars_with_emails.csv", skip_rows=10)
+
+```
+
+```{python}
+
+df_with_name = df.with_columns(
+  pl.col("email")
+    .str.split("@")                       # Split name and email domain.
+    .list.get(0)                          # Get the first part.
+    .str.replace(".", " ", literal=True)  # Replace "." with space.
+    .str.replace("_", " ", literal=True)  # Replace "_" with space.
+    .alias("full_name")
+)
+
+```
+
+```{python}
+
+df_with_name_email = df.with_columns([
+  pl.col("email")
+    # Match the regex and get the first part.
+    .str.extract("([A-Za-z]+)[._\\d]+([A-Za-z]+)", 1)
+    .alias("first_name"),
+
+  pl.col("email")
+    # Match the regex and get the second part.
+    .str.extract("([A-Za-z]+)[._\\d]+([A-Za-z]+)", 2)
+    .alias("last_name"),
+
+  pl.col("email")
+    .str.split("@")
+    .list.get(1)
+    # Get rid of white spaces.
+    .str.strip_chars()
+    # Convert to all lowercase.
+    .str.to_lowercase()
+    .alias("email_domain")
+])
+
+```
+
+```{python}
+
+# Group by email_domain and count each occurrence.
+email_domain_count = (
+  df_with_name_email
+    .group_by("email_domain")
+    .agg(
+      pl.len()
+        .alias("count")
+    )
+    .sort("count", descending=True)
+)
+
+```
+
+## Results
+
+_The cleaning process successfully extracted readable full names as well as separate first-name, last-name, and email-domain fields from inconsistent email formats. Gmail was the most common domain with 707 records, followed by myorg with 286 and yahoo with 193. These results show that the email field was cleaned successfully and could now be used more reliably for communication or later modeling work._
+
+```{python}
+
+df_with_name.select(["email", "full_name"]).head()
+
+```
+
+```{python}
+
+(
+  df_with_name_email
+    .select(
+      ["email", "first_name", "last_name", "email_domain"]
+    )
+    .head()
+)
+
+```
+
+```{python}
+
+email_domain_count
+
+```
+
+
+
+_Reference:_
+
+- _[https://chatgpt.com/share/69bf74f3-dbd8-8005-946e-5368215e9ebe](https://chatgpt.com/share/69bf74f3-dbd8-8005-946e-5368215e9ebe)_
+
+- _[https://chatgpt.com/share/69bf7541-a624-8005-b90c-35986a3d4dae](https://chatgpt.com/share/69bf7541-a624-8005-b90c-35986a3d4dae)_
