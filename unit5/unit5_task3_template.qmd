@@ -52,16 +52,15 @@ _We cleaned a Star Wars survey dataset by removing extra metadata rows, extracti
 
 _The dataset contained metadata before the actual table, so the first 10 rows were skipped when loading the file. Respondent names were reconstructed from the email field by separating the text before the @ symbol and replacing separators with spaces. To create more structured fields, regular expressions were used to extract first names and last names because the email names appeared in multiple formats, including periods, underscores, and embedded digits. Email domains were cleaned by trimming whitespace and converting text to lowercase so equivalent domains would not be counted separately._
 
+_We converted categorical survey responses into numeric values so the data could be used in a machine learning model. Age and income ranges were converted using midpoints, education levels were mapped to an ordered scale, and favorability ratings were converted to a 1–5 scale. The original categorical columns were removed after conversion. Some missing values remained in the dataset because not all respondents answered every question._
 
 ```{python}
-
 # Skip the first 10 rows to import the actual data.
 df = pl.read_csv("StarWars_with_emails.csv", skip_rows=10)
 
 ```
 
 ```{python}
-
 df_with_name = df.with_columns(
   pl.col("email")
     .str.split("@")                       # Split name and email domain.
@@ -70,12 +69,12 @@ df_with_name = df.with_columns(
     .str.replace("_", " ", literal=True)  # Replace "_" with space.
     .alias("full_name")
 )
+df_with_name.select(["email", "full_name"]).head()
 
 ```
 
 ```{python}
-
-df_with_name_email = df.with_columns([
+df_processing = df.with_columns([
   pl.col("email")
     # Match the regex and get the first part.
     .str.extract("([A-Za-z]+)[._\\d]+([A-Za-z]+)", 1)
@@ -96,10 +95,17 @@ df_with_name_email = df.with_columns([
     .alias("email_domain")
 ])
 
+(
+  df_processing
+    .select(
+      ["email", "first_name", "last_name", "email_domain"]
+    )
+    .head()
+)
+
 ```
 
 ```{python}
-
 # Group by email_domain and count each occurrence.
 email_domain_count = (
   df_with_name_email
@@ -110,37 +116,109 @@ email_domain_count = (
     )
     .sort("count", descending=True)
 )
+email_domain_count
+
+```
+
+```{python}
+df_processing = df_processing.filter(
+  pl.col("seen_episode_I").is_not_null() |
+  pl.col("seen_episode_II").is_not_null() |
+  pl.col("seen_episode_III").is_not_null() |
+  pl.col("seen_episode_IV").is_not_null() |
+  pl.col("seen_episode_V").is_not_null() |
+  pl.col("seen_episode_VI").is_not_null()
+)
+
+df_processing = df_processing.with_columns(
+  pl.when(pl.col("age") == "18-29")
+    .then(23.5)
+    .when(pl.col("age") == "30-44")
+    .then(37)
+    .when(pl.col("age") == "45-60")
+    .then(52.5)
+    .when(pl.col("age") == "> 60")
+    .then(70)
+    .otherwise(None)
+    .alias("age_num")
+)
+
+df_processing = df_processing.drop("age")
+
+df_processing = df_processing.with_columns(
+  pl.when(pl.col("education") == "High school degree")
+    .then(1)
+    .when(pl.col("education") == "Some college or Associate degree")
+    .then(2)
+    .when(pl.col("education") == "Bachelor degree")
+    .then(3)
+    .when(pl.col("education") == "Graduate degree")
+    .then(4)
+    .otherwise(None)
+    .alias("education_num")
+)
+
+df_processing = df_processing.drop("education")
+
+df_processing = df_processing.with_columns(
+  pl.when(pl.col("household_income") == "$0 - $24,999")
+    .then(12499.5)
+    .when(pl.col("household_income") == "$25,000 - $49,999")
+    .then(37499.5)
+    .when(pl.col("household_income") == "$50,000 - $99,999")
+    .then(74999.5)
+    .when(pl.col("household_income") == "$100,000 - $149,999")
+    .then(124999.5)
+    .when(pl.col("household_income") == "$150,000+")
+    .then(200000)
+    .otherwise(None)
+    .alias("household_income_num")
+)
+
+df_processing = df_processing.drop("household_income")
+
+favor_cols = [
+  "han_solo",
+  "luke_skywalker",
+  "princess_leia_organa",
+  "anakin_skywalker",
+  "obi_wan_kenobi",
+  "emperor_palpatine",
+  "darth_vader",
+  "lando_calrissian",
+  "boba_fett",
+  "C_3PO",
+  "R2_D2",
+  "jar_jar_binks",
+  "padme_amidala",
+  "yoda",
+]
+
+df_processing = df_processing.with_columns([
+  pl.when(pl.col(col) == "Very unfavorably")
+    .then(1)
+    .when(pl.col(col) == "Somewhat unfavorably")
+    .then(2)
+    .when(pl.col(col) == "Neither favorably nor unfavorably")
+    .then(3)
+    .when(pl.col(col) == "Somewhat favorably")
+    .then(4)
+    .when(pl.col(col) == "Very favorably")
+    .then(5)
+    .otherwise(None)
+    .alias(col + "_num")
+    for col in favor_cols
+])
+
+df_processing = df_processing.drop(favor_cols)
+
+df_processing.head()
 
 ```
 
 ## Results
 
 _The cleaning process successfully extracted readable full names as well as separate first-name, last-name, and email-domain fields from inconsistent email formats. Gmail was the most common domain with 707 records, followed by myorg with 286 and yahoo with 193. These results show that the email field was cleaned successfully and could now be used more reliably for communication or later modeling work._
-
-```{python}
-
-df_with_name.select(["email", "full_name"]).head()
-
-```
-
-```{python}
-
-(
-  df_with_name_email
-    .select(
-      ["email", "first_name", "last_name", "email_domain"]
-    )
-    .head()
-)
-
-```
-
-```{python}
-
-email_domain_count
-
-```
-
 
 
 _Reference:_
