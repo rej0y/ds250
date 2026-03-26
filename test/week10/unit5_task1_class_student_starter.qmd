@@ -103,3 +103,26 @@ phone3
 
 
 ```
+
+
+
+
+
+
+
+
+
+```{python}
+edu_dict = {
+    "Less": 9
+    "High": 12,
+    "Some": 14,
+    "Bachelor": 16,
+    "Graduate": 19,
+}
+```
+
+
+
+
+oi
